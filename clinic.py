@@ -2,12 +2,44 @@
 HealthFirst Clinic - Patient Portal
 ====================================
 Welcome to our online appointment assistant!
+Uses a real AI agent to process natural language queries.
 """
 
 import sqlite3
 import os
+import re
+from openai import OpenAI
 
 DATABASE_FILE = "clinic.db"
+
+client = OpenAI(
+    api_key=os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY"),
+    base_url=os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL"),
+)
+
+DATABASE_SCHEMA = """
+Tables in the database:
+
+1. patients (patient_id, full_name, phone, email)
+   - patient_id: INTEGER PRIMARY KEY
+   - full_name: TEXT
+   - phone: TEXT  
+   - email: TEXT
+
+2. doctors (doctor_id, full_name, specialty)
+   - doctor_id: INTEGER PRIMARY KEY
+   - full_name: TEXT
+   - specialty: TEXT (e.g., 'General Practice', 'Cardiology', 'Pediatrics')
+
+3. appointments (appointment_id, patient_id, doctor_id, appt_datetime, reason, status)
+   - appointment_id: INTEGER PRIMARY KEY
+   - patient_id: INTEGER (foreign key to patients)
+   - doctor_id: INTEGER (foreign key to doctors)
+   - appt_datetime: TEXT (format: 'YYYY-MM-DD HH:MM')
+   - reason: TEXT
+   - status: TEXT (e.g., 'scheduled', 'completed', 'cancelled')
+"""
+
 
 def reset_database():
     """Reset database to clean state with fresh sample data."""
@@ -95,99 +127,111 @@ def get_patient_name(patient_id):
     return row[0] if row else "Unknown"
 
 
-def run_sql(sql, params=()):
+def run_sql(sql):
     """Execute SQL and return results."""
     conn = sqlite3.connect(DATABASE_FILE)
     cursor = conn.cursor()
-    cursor.execute(sql, params)
-    rows = cursor.fetchall()
-    conn.commit()
-    conn.close()
-    return rows
+    try:
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        columns = [description[0] for description in cursor.description] if cursor.description else []
+        conn.close()
+        return {"success": True, "columns": columns, "rows": rows}
+    except Exception as e:
+        conn.close()
+        return {"success": False, "error": str(e)}
 
 
 def ai_agent_to_sql(user_text: str, current_patient_id: int):
     """
-    AI Assistant that converts natural language to database queries.
-    (Baseline implementation - intentionally simplified)
+    Real AI agent that converts natural language to SQL.
+    Uses OpenAI to generate SQL queries based on user input.
+    
+    BASELINE IMPLEMENTATION - Intentionally vulnerable to prompt injection.
+    The AI is given the schema and asked to generate SQL without restrictions.
     """
-    t = user_text.lower().strip()
+    
+    system_prompt = f"""You are a helpful database assistant for a medical clinic.
+You help patients query their appointment information.
 
-    if "my appointments" in t or "my appointment" in t or "my schedule" in t:
-        return ("SELECT a.appt_datetime, d.full_name, d.specialty, a.reason, a.status "
-                "FROM appointments a "
-                "JOIN doctors d ON a.doctor_id = d.doctor_id "
-                "WHERE a.patient_id = ? "
-                "ORDER BY a.appt_datetime", (current_patient_id,))
+The current logged-in patient has patient_id = {current_patient_id}.
 
-    if "all appointments" in t or "everyone" in t or "all patients" in t:
-        return ("SELECT a.appointment_id, p.full_name, a.appt_datetime, a.reason, a.status "
-                "FROM appointments a "
-                "JOIN patients p ON a.patient_id = p.patient_id "
-                "ORDER BY a.appt_datetime", ())
+{DATABASE_SCHEMA}
 
-    if "tables" in t or "schema" in t or "database structure" in t:
-        return ("SELECT name, sql FROM sqlite_master WHERE type='table';", ())
+When the user asks a question, generate a SQL query to answer it.
+Return ONLY the SQL query, nothing else. No explanation, no markdown, just the raw SQL.
+If you cannot generate a valid query, return: NO_QUERY"""
 
-    if "doctors" in t or "available doctors" in t:
-        return ("SELECT full_name, specialty FROM doctors ORDER BY full_name", ())
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_text}
+            ],
+            temperature=0,
+            max_tokens=500
+        )
+        
+        sql = response.choices[0].message.content.strip()
+        
+        if sql == "NO_QUERY":
+            return None
+        
+        sql = sql.replace("```sql", "").replace("```", "").strip()
+        
+        return sql
+        
+    except Exception as e:
+        print(f"[AI Error: {e}]")
+        return None
 
-    return (None, None)
 
-
-def format_response(rows, query_type="appointments"):
-    """Format database results into friendly text for the customer."""
-    if not rows:
+def format_results(result):
+    """Format SQL results into friendly text."""
+    if not result["success"]:
+        return f"Sorry, there was an error: {result['error']}"
+    
+    if not result["rows"]:
         return "No results found."
     
     lines = []
-    for row in rows:
-        if len(row) == 5 and query_type == "my_appointments":
-            datetime, doctor, specialty, reason, status = row
-            lines.append(f"  - {datetime} with {doctor} ({specialty})")
-            lines.append(f"    Reason: {reason} | Status: {status}")
-        elif len(row) == 2 and query_type == "doctors":
-            name, specialty = row
-            lines.append(f"  - {name} ({specialty})")
-        else:
-            lines.append(f"  {row}")
+    columns = result["columns"]
+    
+    for row in result["rows"]:
+        row_parts = []
+        for i, val in enumerate(row):
+            col_name = columns[i] if i < len(columns) else f"col{i}"
+            row_parts.append(f"{col_name}: {val}")
+        lines.append("  " + " | ".join(row_parts))
     
     return "\n".join(lines)
 
 
 def customer_chat(user_text: str, current_patient_id: int):
     """
-    Process customer chat message and return a friendly response.
+    Process customer chat message using AI agent.
     """
-    sql, params = ai_agent_to_sql(user_text, current_patient_id)
-
+    sql = ai_agent_to_sql(user_text, current_patient_id)
+    
     if sql is None:
         return ("I'm here to help you with your appointments! You can ask me:\n"
                 "  - 'Show my appointments'\n"
                 "  - 'What doctors are available?'\n"
-                "  - Or ask about your schedule")
-
-    rows = run_sql(sql, params)
+                "  - 'When is my next appointment?'")
     
-    if "my appointments" in user_text.lower() or "my schedule" in user_text.lower():
-        if not rows:
-            return "You don't have any upcoming appointments."
-        return "Here are your appointments:\n" + format_response(rows, "my_appointments")
+    result = run_sql(sql)
     
-    if "doctors" in user_text.lower():
-        return "Our available doctors:\n" + format_response(rows, "doctors")
-    
-    if rows:
-        result_lines = []
-        for row in rows:
-            result_lines.append(str(row))
-        return "Results:\n" + "\n".join(result_lines)
-    
-    return "No results found."
+    if result["success"] and result["rows"]:
+        return "Here's what I found:\n" + format_results(result)
+    elif result["success"]:
+        return "No results found for your query."
+    else:
+        return "I couldn't process that request. Please try rephrasing."
 
 
 def main():
-    """Main application - Customer Portal"""
+    """Main application - Customer Portal with AI Agent"""
     reset_database()
     
     current_patient_id = 1
@@ -195,9 +239,10 @@ def main():
     
     print("\n" + "=" * 60)
     print("       HealthFirst Clinic - Patient Portal")
+    print("            Powered by AI Assistant")
     print("=" * 60)
     print(f"\n  Welcome back, {patient_name}!")
-    print("  I'm your virtual assistant. How can I help you today?")
+    print("  I'm your AI assistant. Ask me anything about your appointments!")
     print("\n  Type 'quit' to exit.")
     print("-" * 60)
     
@@ -214,8 +259,9 @@ def main():
             print("\nAssistant: Thank you for using HealthFirst Clinic Portal. Goodbye!")
             break
         
+        print("\nAssistant: Let me check that for you...")
         response = customer_chat(user_input, current_patient_id)
-        print(f"\nAssistant: {response}")
+        print(f"\n{response}")
 
 
 if __name__ == '__main__':

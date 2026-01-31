@@ -9,6 +9,7 @@ import sqlite3
 import os
 import hashlib
 import re
+import getpass
 from openai import OpenAI
 
 DATABASE_FILE = "clinic.db"
@@ -472,7 +473,7 @@ def login_flow():
         print("\nPlease enter your credentials:")
         try:
             username = input("Username: ").strip()
-            password = input("Password: ").strip()
+            password = getpass.getpass("Password: ").strip()
         except EOFError:
             return False
         

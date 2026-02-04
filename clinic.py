@@ -19,14 +19,17 @@ client = OpenAI(
     base_url=os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL"),
 )
 
-# Session state (simulates server-side session)
+MULTI_TURN = True
+MAX_HISTORY_TURNS = 6
+
 SESSION = {
     "authenticated": False,
     "user_id": None,
     "role": None,
     "linked_patient_id": None,
     "linked_doctor_id": None,
-    "username": None
+    "username": None,
+    "conversation_history": []
 }
 
 # User credentials (prototype-level - in production would be hashed in DB)
@@ -100,6 +103,7 @@ def logout():
     SESSION["linked_patient_id"] = None
     SESSION["linked_doctor_id"] = None
     SESSION["username"] = None
+    SESSION["conversation_history"] = []
 
 
 def get_masked_password(prompt="Password: "):
@@ -412,23 +416,84 @@ def get_guiding_prompt():
     )
 
 
+SAFECHAT_PATTERNS = {
+    "greeting": ["hi", "hello", "hey", "good morning", "good afternoon", "good evening"],
+    "help": ["help", "what can you do", "how do i", "how can i"],
+    "thanks": ["thanks", "thank you", "thx", "appreciated"]
+}
+
+SAFECHAT_RESPONSES = {
+    "greeting": "Hello! How can I help you with your appointments today?",
+    "help": "I can help you view your appointments and see available doctors. Just ask me something like 'Show my appointments' or 'What doctors are available?'",
+    "thanks": "You're welcome! Let me know if there's anything else I can help with."
+}
+
+SAFECHAT_UNAUTHENTICATED_PROMPT = "Hello! Please log in to access your appointment information."
+
+
+def handle_safechat(user_text: str):
+    """
+    Handle SafeChat messages (greetings, help, thanks) without LLM or database.
+    Returns (response, handled) tuple. If handled is True, response is the SafeChat reply.
+    If handled is False, the message should be processed normally.
+    """
+    text_lower = user_text.lower().strip()
+    
+    for category, patterns in SAFECHAT_PATTERNS.items():
+        for pattern in patterns:
+            if pattern in text_lower:
+                if not is_authenticated():
+                    return SAFECHAT_UNAUTHENTICATED_PROMPT, True
+                return SAFECHAT_RESPONSES[category], True
+    
+    return None, False
+
+
+def add_to_history(user_message: str, assistant_response: str):
+    """Add a conversation turn to history (user message + assistant text only)."""
+    if not MULTI_TURN:
+        return
+    
+    SESSION["conversation_history"].append({
+        "user": user_message,
+        "assistant": assistant_response
+    })
+    
+    if len(SESSION["conversation_history"]) > MAX_HISTORY_TURNS:
+        SESSION["conversation_history"] = SESSION["conversation_history"][-MAX_HISTORY_TURNS:]
+
+
+def get_conversation_messages():
+    """Build message list from conversation history for LLM call."""
+    messages = []
+    for turn in SESSION["conversation_history"]:
+        messages.append({"role": "user", "content": turn["user"]})
+        messages.append({"role": "assistant", "content": turn["assistant"]})
+    return messages
+
+
 def ai_agent_to_sql(user_text: str):
     """
     AI agent that converts natural language to SQL.
     Uses security guiding prompt from code (not user-controlled).
+    When MULTI_TURN is enabled, includes conversation history.
     """
     if not is_authenticated():
         return None
     
     system_prompt = get_guiding_prompt()
     
+    messages = [{"role": "system", "content": system_prompt}]
+    
+    if MULTI_TURN:
+        messages.extend(get_conversation_messages())
+    
+    messages.append({"role": "user", "content": user_text})
+    
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_text}
-            ],
+            messages=messages,
             temperature=0,
             max_tokens=500
         )
@@ -475,29 +540,42 @@ def customer_chat(user_text: str):
     """
     Process customer chat message using AI agent.
     Access control is enforced in CODE after SQL generation.
+    SafeChat messages are handled without LLM or database.
     """
+    safechat_response, handled = handle_safechat(user_text)
+    if handled:
+        if is_authenticated() and MULTI_TURN:
+            add_to_history(user_text, safechat_response)
+        return safechat_response
+    
     if not is_authenticated():
         return "Request denied."
     
     sql = ai_agent_to_sql(user_text)
     
     if sql is None:
-        return "Request denied."
+        response = "Request denied."
+        return response
     
-    # HARD ACCESS CONTROL - enforced here in code
     sql_modified, error = enforce_access_control(sql)
     
     if error:
-        return "Request denied."
+        response = "Request denied."
+        return response
     
     result = run_sql(sql_modified)
     
     if result["success"] and result["rows"]:
-        return "Here's what I found:\n" + format_results(result)
+        response = "Here's what I found:\n" + format_results(result)
     elif result["success"]:
-        return "No results found for your query."
+        response = "No results found for your query."
     else:
-        return "Request denied."
+        response = "Request denied."
+    
+    if MULTI_TURN:
+        add_to_history(user_text, response)
+    
+    return response
 
 
 def login_flow():

@@ -9,6 +9,7 @@ clinic.py           - Main application with authentication and access control
 test_policy.py      - Automated policy enforcement tests (33 tests)
 guiding_prompt.txt  - Security prompt template for LLM
 policy_test_results.txt - Latest test results
+baseline_sql_log.txt - Private SQL decision log (not shown to users)
 clinic.db           - SQLite database (auto-generated)
 ```
 
@@ -42,6 +43,11 @@ clinic.db           - SQLite database (auto-generated)
 - Defined as `GUIDING_PROMPT` constant in clinic.py
 - Injected into LLM with session context
 - Instructs LLM to deny unauthorized requests
+
+### Private SQL Log
+- Logs to `baseline_sql_log.txt` (not shown to users)
+- Records: timestamp, role, user prompt, LLM-generated SQL, decision (allowed/denied)
+- Does NOT change any security behavior
 
 ## Running the App
 - Interactive mode: `python clinic.py`

@@ -10,9 +10,11 @@ import os
 import hashlib
 import re
 import sys
+from datetime import datetime
 from openai import OpenAI
 
 DATABASE_FILE = "clinic.db"
+SQL_LOG_FILE = "baseline_sql_log.txt"
 
 client = OpenAI(
     api_key=os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY"),
@@ -472,6 +474,24 @@ def get_conversation_messages():
     return messages
 
 
+def log_sql_decision(user_prompt: str, sql: str, decision: str):
+    """
+    Log SQL generation and access control decisions to private log file.
+    This log is NOT shown to users and does NOT affect security behavior.
+    """
+    session = get_session()
+    role = session["role"] or "unauthenticated"
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    with open(SQL_LOG_FILE, "a") as f:
+        f.write(f"[{timestamp}]\n")
+        f.write(f"Role: {role}\n")
+        f.write(f"Prompt: {user_prompt}\n")
+        f.write(f"SQL: {sql}\n")
+        f.write(f"Decision: {decision}\n")
+        f.write("-" * 60 + "\n")
+
+
 def ai_agent_to_sql(user_text: str):
     """
     AI agent that converts natural language to SQL.
@@ -554,22 +574,27 @@ def customer_chat(user_text: str):
     sql = ai_agent_to_sql(user_text)
     
     if sql is None:
+        log_sql_decision(user_text, "NO_QUERY", "denied")
         response = "Request denied."
         return response
     
     sql_modified, error = enforce_access_control(sql)
     
     if error:
+        log_sql_decision(user_text, sql, "denied")
         response = "Request denied."
         return response
     
     result = run_sql(sql_modified)
     
     if result["success"] and result["rows"]:
+        log_sql_decision(user_text, sql, "allowed")
         response = "Here's what I found:\n" + format_results(result)
     elif result["success"]:
+        log_sql_decision(user_text, sql, "allowed")
         response = "No results found for your query."
     else:
+        log_sql_decision(user_text, sql, "denied")
         response = "Request denied."
     
     if MULTI_TURN:

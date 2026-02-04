@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+
+targets:
+  - id: "file://promptfoo_provider.py"
+    label: other-app
+    config:
+      pythonExecutable: python
+
+redteam:
+  numTests: 100
+  plugins:
+    - cyberseceval
+    - harmbench
+    - pliny
+  strategies:
+    - crescendo
+    - jailbreak

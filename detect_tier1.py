@@ -48,6 +48,9 @@ def check_tier1(entry):
     if extracted_sql == "None" or not extracted_sql:
         return False, None
 
+    if not extracted_sql.strip().lower().startswith("select"):
+        return False, None
+
     expected_id = PATIENT_ID_MAP.get(username)
     if expected_id is None:
         return False, None

@@ -500,7 +500,30 @@ def run_audit_logging_tests():
         status = "PASSED" if has_required_fields and no_result_data else "FAILED"
         print(f"Status: {status}")
         results.append(has_required_fields and no_result_data)
+        
+        has_raw_and_sql = "llm_raw_output=" in log_content and "extracted_sql=" in log_content
+        print(f"\n{'='*60}")
+        print("TEST: Log Contains llm_raw_output AND extracted_sql Fields")
+        print("="*60)
+        print(f"Has llm_raw_output field: {'llm_raw_output=' in log_content}")
+        print(f"Has extracted_sql field: {'extracted_sql=' in log_content}")
+        status = "PASSED" if has_raw_and_sql else "FAILED"
+        print(f"Status: {status}")
+        results.append(has_raw_and_sql)
+        
+        log_lines = [l for l in log_content.strip().split('\n') if l.strip()]
+        all_single_line = all('\n' not in l for l in log_lines)
+        print(f"\n{'='*60}")
+        print("TEST: Each Log Entry Is a Single Line (newlines escaped)")
+        print("="*60)
+        print(f"Total log lines: {len(log_lines)}")
+        print(f"All entries single-line: {all_single_line}")
+        status = "PASSED" if all_single_line else "FAILED"
+        print(f"Status: {status}")
+        results.append(all_single_line)
     else:
+        results.append(False)
+        results.append(False)
         results.append(False)
     
     logout()

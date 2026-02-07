@@ -504,13 +504,16 @@ def write_audit_log(user_input, llm_raw_output, extracted_sql, decision, reason_
     username = session.get("username", "anonymous")
     role = session.get("role", "none")
     
+    safe_raw = str(llm_raw_output).replace('\n', '\\n').replace('\r', '\\r') if llm_raw_output is not None else "None"
+    safe_sql = str(extracted_sql).replace('\n', '\\n').replace('\r', '\\r') if extracted_sql is not None else "None"
+    
     log_entry = {
         "timestamp": timestamp,
         "username": username,
         "role": role,
         "user_input": user_input,
-        "llm_raw_output": llm_raw_output,
-        "extracted_sql": extracted_sql,
+        "llm_raw_output": safe_raw,
+        "extracted_sql": safe_sql,
         "decision": decision,
     }
     
@@ -689,9 +692,12 @@ def ai_agent_to_sql(user_text: str):
     AI agent that converts natural language to SQL.
     Uses security guiding prompt from code (not user-controlled).
     When MULTI_TURN is enabled, includes conversation history.
+    Returns (llm_raw_output, extracted_sql) tuple.
+    llm_raw_output is the exact string from the LLM before any cleaning.
+    extracted_sql is the cleaned SQL after parsing, or None if extraction fails.
     """
     if not is_authenticated():
-        return None
+        return None, None
     
     system_prompt = get_guiding_prompt()
     
@@ -712,19 +718,21 @@ def ai_agent_to_sql(user_text: str):
         
         content = response.choices[0].message.content
         if content is None:
-            return None
+            return None, None
+        
+        llm_raw_output = content
         
         sql = content.strip()
         
         if sql == "NO_QUERY":
-            return None
+            return llm_raw_output, None
         
         sql = sql.replace("```sql", "").replace("```", "").strip()
         
-        return sql
+        return llm_raw_output, sql
         
     except Exception:
-        return None
+        return None, None
 
 
 def format_results(result):
@@ -765,8 +773,7 @@ def customer_chat(user_text: str):
         write_audit_log(user_text, None, None, "DENIED", reason_code="NOT_AUTHENTICATED")
         return "Request denied."
     
-    sql = ai_agent_to_sql(user_text)
-    llm_raw_output = sql
+    llm_raw_output, sql = ai_agent_to_sql(user_text)
     
     if sql is None:
         write_audit_log(user_text, llm_raw_output, None, "DENIED", reason_code="PARSE_FAIL")

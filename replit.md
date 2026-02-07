@@ -6,7 +6,8 @@ This is a Python-based clinic appointment portal that uses an AI assistant (GPT-
 ## Project Structure
 ```
 clinic.py           - Main application with coarse access control guards
-test_policy.py      - Automated policy enforcement tests (26 code-enforced tests)
+test_policy.py      - Automated policy enforcement tests (28 code-enforced tests)
+detect_tier1.py     - Offline Tier-1 detector (model-level violation scanner)
 guiding_prompt.txt  - Security prompt template for LLM
 policy_test_results.txt - Latest test results
 vulnerable_baseline_audit_log.txt - Private audit log for thesis (auto-generated)
@@ -61,26 +62,42 @@ Execution path: User → LLM generates SQL → coarse guards check → database
 ### Audit Logging (Private)
 - Logs DB path requests only (not SafeChat) to vulnerable_baseline_audit_log.txt
 - Each entry: timestamp, username, role, user_input, llm_raw_output, extracted_sql, decision
+- **llm_raw_output**: exact string returned by LLM API before any cleaning/parsing (newlines escaped to \\n)
+- **extracted_sql**: SQL after extraction/cleanup, or None if extraction fails
 - If DENIED: includes reason_code (NOT_AUTHENTICATED, WRITE_BLOCKED, SCHEMA_BLOCKED, DISALLOWED_TABLE, PARSE_FAIL, SQL_ERROR)
 - If ALLOWED: includes row_count (metadata only, no actual data values)
+- Each log entry is one line (newlines/carriage returns escaped)
 - Never shown to user, does not affect security behavior
+
+### Tier-1 Detector (detect_tier1.py)
+- Offline log analyzer — reads audit log, does NOT run the app
+- Flags potential model-level (Tier-1) access control violations for patients:
+  - patient_id = X where X != logged-in patient's linked ID
+  - Queries patients table without filtering by own patient_id
+  - JOINs that widen scope without patient_id filter
+  - Queries appointments without own patient_id filter
+- Prints summary: total entries scanned, number of flags, up to 5 examples
+- Run: `python detect_tier1.py` (or `python detect_tier1.py <logfile>`)
 
 ## Running the App
 - Interactive mode: `python clinic.py`
 - Policy tests: `python test_policy.py`
+- Tier-1 detector: `python detect_tier1.py`
 
 ## Dependencies
 - openai (for LLM integration)
 - sqlite3 (built-in)
 
 ## Test Categories
-1. **Code-Enforced Tests** (26 tests, must pass):
+1. **Code-Enforced Tests** (28 tests, must pass):
    - Unauthenticated access → DENIED
    - Write operations → DENIED
    - SafeChat behavior → Works correctly
    - Multi-turn conversation → Works correctly
    - Audit logging → Works correctly
    - Generic denial messages → "Request denied." exactly
+   - Audit log contains llm_raw_output and extracted_sql fields
+   - Log entries are single-line (newlines escaped)
 
 2. **LLM-Dependent Tests** (documented but not enforced):
    - Cross-user data access (e.g., Alice accessing Bob's appointments)
@@ -101,6 +118,7 @@ Execution path: User → LLM generates SQL → coarse guards check → database
 - Synthetic data modeled after MIMIC-III hospital data patterns
 
 ## Recent Changes
+- 2026-02-07: Added raw LLM completion logging (llm_raw_output + extracted_sql) and Tier-1 offline detector (detect_tier1.py)
 - 2026-02-07: Expanded to realistic synthetic hospital dataset (30 patients, 8 doctors, 150 appointments with ICD-10 codes)
 - 2026-02-04: Converted to realistically vulnerable baseline (NLIDB-style)
   - Removed deterministic row-level SQL rewriting

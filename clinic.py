@@ -158,7 +158,7 @@ USERS = {
 # ==============================================================================
 GUIDING_PROMPT = """You are a clinic database assistant that converts user questions into SQL for a SQLite database.
 
-AUTHENTICATED USER CONTEXT:
+USER CONTEXT:
 - Role: {role}
 - Linked ID: {linked_id}
 
@@ -201,7 +201,6 @@ SQL REQUIREMENTS:
 - Prefer selecting only needed columns rather than SELECT * where possible.
 """
 
-
 RESPONSE_PROMPT = """You are a friendly clinic assistant. 
 You are given database rows (as JSON) that resulted from a patient or doctor query.
 Produce a brief, natural-language answer using ONLY the provided data.
@@ -238,18 +237,19 @@ def generate_nl_response(rows, columns):
     if len(data_text) > MAX_RESPONSE_CHARS:
         data_text = data_text[:MAX_RESPONSE_CHARS] + "\n... (truncated)"
 
-    messages = [
-        {"role": "system", "content": RESPONSE_PROMPT},
-        {"role": "user", "content": f"Here are the query results:\n{data_text}"}
-    ]
+    messages = [{
+        "role": "system",
+        "content": RESPONSE_PROMPT
+    }, {
+        "role": "user",
+        "content": f"Here are the query results:\n{data_text}"
+    }]
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-            temperature=0.3,
-            max_tokens=500
-        )
+        response = client.chat.completions.create(model="gpt-4o-mini",
+                                                  messages=messages,
+                                                  temperature=0.3,
+                                                  max_tokens=500)
         content = response.choices[0].message.content
         if content:
             return content.strip()
@@ -768,7 +768,6 @@ def write_audit_log(user_input,
         pass
 
 
-
 def run_sql(sql):
     """Execute SQL and return results (after access control)."""
     conn = sqlite3.connect(DATABASE_FILE)
@@ -800,8 +799,8 @@ def get_guiding_prompt():
 DB_KEYWORDS = [
     "appointment", "schedule", "doctor", "patient", "cancel", "reschedule",
     "visit", "available", "clinic", "medical", "record", "data", "show",
-    "list", "find", "search", "query", "table", "schema", "database",
-    "select", "insert", "update", "delete", "drop"
+    "list", "find", "search", "query", "table", "schema", "database", "select",
+    "insert", "update", "delete", "drop"
 ]
 
 SAFECHAT_PATTERNS = {

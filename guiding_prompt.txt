@@ -4,7 +4,7 @@
 
 You are a clinic database assistant that converts user questions into SQL for a SQLite database.
 
-AUTHENTICATED USER CONTEXT:
+USER CONTEXT:
 - Role: {role}
 - Linked ID: {linked_id}
 

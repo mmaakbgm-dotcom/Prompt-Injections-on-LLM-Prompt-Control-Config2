@@ -18,13 +18,22 @@ clinic.db           - SQLite database (auto-generated)
 promptfoo_provider.py - Promptfoo Python provider (calls clinic.py functions, supports single + multi-turn)
 promptfooconfig.yaml  - Promptfoo evaluation config
 promptfoo_tests.yaml  - Promptfoo test cases (8 tests: 4 benign + 4 injection)
-tests/                - Promptfoo vulnerability test suites (48 tests across 6 files)
-  jailbreak_override.yaml   - Instruction hierarchy override / jailbreak (8 tests)
-  policy_smuggling.yaml     - Fake system message / policy injection (8 tests)
-  exfil_format_dump.yaml    - Data exfiltration via formatting requests (8 tests)
-  prompt_leakage.yaml       - System prompt / schema extraction attempts (8 tests)
-  role_confusion.yaml       - Identity impersonation / role claiming (8 tests)
-  multiturn_poisoning.yaml  - Multi-turn memory poisoning attacks (8 tests)
+tests/                - Promptfoo vulnerability test suites (112 tests across 15 files)
+  jailbreak_override.yaml       - Instruction hierarchy override / jailbreak (8 tests)
+  policy_smuggling.yaml         - Fake system message / policy injection (8 tests)
+  exfil_format_dump.yaml        - Data exfiltration via formatting requests (8 tests)
+  prompt_leakage.yaml           - System prompt / schema extraction attempts (8 tests)
+  role_confusion.yaml           - Identity impersonation / role claiming (8 tests)
+  multiturn_poisoning.yaml      - Multi-turn memory poisoning attacks (8 tests)
+  sql_dialect_evasion.yaml      - UNION/subquery/CTE/tautology SQL bypass (8 tests)
+  encoding_obfuscation.yaml     - Base64/ROT13/leetspeak/Unicode obfuscation (7 tests)
+  context_exhaustion.yaml       - Payload padding / context window overflow (7 tests)
+  output_format_manipulation.yaml - CSV/JSON/markdown format exfiltration (7 tests)
+  temporal_logic.yaml           - Unbounded time range scope bypass (7 tests)
+  semantic_equivalence.yaml     - Synonym/euphemism rephrasing attacks (7 tests)
+  cot_extraction.yaml           - Chain-of-thought / debug mode extraction (7 tests)
+  tool_function_confusion.yaml  - Fake admin tools / maintenance mode (7 tests)
+  multilingual_bypass.yaml      - Non-English instruction bypass (7 tests)
 ```
 
 ## Key Components
@@ -152,10 +161,11 @@ Execution path: User → LLM generates SQL → database → LLM generates NL ans
   - main() checks os.path.exists("clinic.db") before calling initialize_database()
   - Database created on first run only; subsequent runs connect to existing DB
   - test_policy.py still resets DB for clean test runs
-- 2026-02-16: Added 6 Promptfoo vulnerability test suites (48 tests) for prompt-injection testing
-  - Suites: jailbreak_override, policy_smuggling, exfil_format_dump, prompt_leakage, role_confusion, multiturn_poisoning
+- 2026-02-16: Expanded to 15 Promptfoo vulnerability test suites (120 total tests) for prompt-injection testing
+  - Original 6 suites: jailbreak_override, policy_smuggling, exfil_format_dump, prompt_leakage, role_confusion, multiturn_poisoning
+  - 9 new suites: sql_dialect_evasion, encoding_obfuscation, context_exhaustion, output_format_manipulation, temporal_logic, semantic_equivalence, cot_extraction, tool_function_confusion, multilingual_bypass
   - Provider updated with multi-turn support (vars.turns as JSON string)
-  - Total: 56 Promptfoo tests (8 original + 48 new); run with `npm run eval:promptfoo`
+  - Total: 120 Promptfoo tests (8 original + 112 in tests/); run with `npm run eval:promptfoo`
 - 2026-02-11: Added two-stage LLM pipeline (NL→SQL→DB→NL response) mirroring Prompt2SQL structure
   - Stage 2 RESPONSE_PROMPT generates natural-language answers from DB rows (JSON format)
   - SafeChat tightened: DB-like requests bypass SafeChat and go through full pipeline

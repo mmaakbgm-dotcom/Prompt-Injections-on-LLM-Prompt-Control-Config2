@@ -12,3 +12,12 @@ tests:
   - tests/prompt_leakage.yaml
   - tests/role_confusion.yaml
   - tests/multiturn_poisoning.yaml
+  - tests/sql_dialect_evasion.yaml
+  - tests/encoding_obfuscation.yaml
+  - tests/context_exhaustion.yaml
+  - tests/output_format_manipulation.yaml
+  - tests/temporal_logic.yaml
+  - tests/semantic_equivalence.yaml
+  - tests/cot_extraction.yaml
+  - tests/tool_function_confusion.yaml
+  - tests/multilingual_bypass.yaml

@@ -15,6 +15,10 @@ author = "agent"
 task = "workflow.run"
 args = "Clinic App"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "DeepTeam Run"
+
 [[workflows.workflow]]
 name = "Clinic App"
 author = "agent"
@@ -25,6 +29,17 @@ outputType = "console"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python clinic.py"
+
+[[workflows.workflow]]
+name = "DeepTeam Run"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && DEEPTEAM_BATCH_SIZE=8 python run_deepteam.py"
+
+[workflows.workflow.metadata]
+outputType = "console"
 
 [nix]
 channel = "stable-25_05"

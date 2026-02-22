@@ -64,12 +64,12 @@ outputType = "console"
 name = "Eval MultiTurn"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd /home/runner/workspace && python eval_multiturn_variability.py"
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [nix]
 channel = "stable-25_05"

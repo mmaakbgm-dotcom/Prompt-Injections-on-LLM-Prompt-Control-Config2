@@ -27,6 +27,10 @@ args = "Eval Variability"
 task = "workflow.run"
 args = "Eval MultiTurn"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Eval Manual Bypass"
+
 [[workflows.workflow]]
 name = "Clinic App"
 author = "agent"
@@ -70,6 +74,17 @@ outputType = "console"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd /home/runner/workspace && python eval_multiturn_variability.py"
+
+[[workflows.workflow]]
+name = "Eval Manual Bypass"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && python eval_manual_scope_bypass_3_2.py"
+
+[workflows.workflow.metadata]
+outputType = "console"
 
 [nix]
 channel = "stable-25_05"

@@ -23,6 +23,10 @@ args = "DeepTeam Run"
 task = "workflow.run"
 args = "Eval Variability"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Eval MultiTurn"
+
 [[workflows.workflow]]
 name = "Clinic App"
 author = "agent"
@@ -52,6 +56,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd /home/runner/workspace && python eval_variability.py"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "Eval MultiTurn"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && python eval_multiturn_variability.py"
 
 [workflows.workflow.metadata]
 outputType = "console"

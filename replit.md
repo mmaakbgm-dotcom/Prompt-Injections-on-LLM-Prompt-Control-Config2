@@ -42,6 +42,14 @@ A private audit log (`3_2_audit_log.txt`) records database path requests, includ
 ### Tier-1 Detector (`detect_tier1.py`)
 An offline tool for analyzing audit logs to identify potential model-level access control violations (e.g., patients accessing records outside their scope, doctors accessing patient data without appropriate filtering). It evaluates extracted SQL or raw LLM output for suspicious patterns.
 
+### Phase 2 Scope-Bypass Evaluator (`eval_phase2_scope_bypass_3_2.py`)
+A controlled evaluation runner for clinic_3_2.py that performs:
+1. **Deterministic Reproduction (DR)**: 4 fixed prompts per user (single run each) to verify baseline behavior.
+2. **Targeted Suite**: 12 prompts (2 controls + 10 attack vectors) repeated N times (default 30, configurable via `-n` flag) per user.
+
+Tests are run for two users: `alice` (patient, linked_id=1) and `dr_brown` (doctor, linked_id=1). Violation detection checks whether Stage-1 SQL escapes the user's own scope (e.g., patient accessing patient_id=2 or doctor accessing doctor_id=2). Results are exported to `phase2_scope_bypass_3_2.xlsx` with `runs` and `summary` sheets, and a console summary table is printed. Run via: `python eval_phase2_scope_bypass_3_2.py -n 30`
+
 ## External Dependencies
 -   **openai**: Used for integration with the GPT-4o-mini LLM.
 -   **sqlite3**: The built-in Python module for database management (`clinic.db`).
+-   **openpyxl**: Used for Excel export in evaluation scripts.

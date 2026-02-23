@@ -83,12 +83,12 @@ args = "cd /home/runner/workspace && python eval_multiturn_variability.py"
 name = "Eval Manual Bypass"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd /home/runner/workspace && python eval_manual_scope_bypass_3_2.py"
-
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python eval_phase2_scope_bypass_3_2.py -n 30"
 
 [[workflows.workflow]]
 name = "Scope Override Run"

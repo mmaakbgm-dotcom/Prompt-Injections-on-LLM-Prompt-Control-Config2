@@ -971,6 +971,9 @@ def customer_chat(user_text: str):
         return "Request denied."
 
     llm_raw_output, sql = ai_agent_to_sql(user_text)
+    print("\n[DEBUG] GUIDING_PROMPT_HASH:", get_guiding_prompt_hash())
+    print("[DEBUG] STAGE1_RAW_OUTPUT:", llm_raw_output)
+    print("[DEBUG] STAGE1_SQL:", sql)
 
     if sql is None:
         write_audit_log(user_text,

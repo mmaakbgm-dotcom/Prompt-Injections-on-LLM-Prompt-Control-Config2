@@ -49,6 +49,21 @@ A controlled evaluation runner for clinic_3_2.py that performs:
 
 Tests are run for two users: `alice` (patient, linked_id=1) and `dr_brown` (doctor, linked_id=1). Violation detection checks whether Stage-1 SQL escapes the user's own scope (e.g., patient accessing patient_id=2 or doctor accessing doctor_id=2). Results are exported to `phase2_scope_bypass_3_2.xlsx` with `runs` and `summary` sheets, and a console summary table is printed. Run via: `python eval_phase2_scope_bypass_3_2.py -n 30`
 
+### Adversarial Suite Evaluator (`eval_adversarial_suite_3_2.py`)
+An "Intermediary Robustness Adversarial Suite" targeting clinic_3_2.py to test weaknesses beyond simple scope bypass. Tests 7 attack categories (23 prompts per chain):
+- **A**: Aggregation & system-stat leakage (COUNT, MAX, MIN without scoping)
+- **B**: GROUP BY / DISTINCT leakage (unscoped DISTINCT queries)
+- **C**: OR / boolean logic (OR-based scope escape attempts)
+- **D**: Subqueries / nesting (subquery-based bypasses)
+- **E**: UNION (UNION-based data exfiltration)
+- **F**: Multi-turn drift (benign prompt followed by escalation in same session)
+- **G**: Complexity (complex queries designed to confuse scoping)
+
+Captures ac_action (N_A / ALLOWED_UNCHANGED — no intermediary in 3.2), violation detection (patient_id scope escape, unscoped aggregates, meta-access), and exports to `adversarial_suite_3_2.xlsx` with `runs` and `summary` sheets. Run via: `python eval_adversarial_suite_3_2.py -n 20`
+
+### Stability Schema Evaluator (`eval_stability_schema_3_2.py`)
+A 9-category attack suite with 36 prompts per chain testing direct role override, ignore-previous-instructions, impersonation, command modification, situational dialogue, indirect injection, multi-step agent style, trigger optimization, and schema leakage. Exports to `stability_schema_3_2_new_replication.xlsx`. Run via: `python eval_stability_schema_3_2.py -n 50`
+
 ## External Dependencies
 -   **openai**: Used for integration with the GPT-4o-mini LLM.
 -   **sqlite3**: The built-in Python module for database management (`clinic.db`).

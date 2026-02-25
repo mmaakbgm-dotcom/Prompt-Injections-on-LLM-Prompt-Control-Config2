@@ -106,12 +106,12 @@ args = "cd /home/runner/workspace && python run_scope_only.py"
 name = "Adversarial Suite Run"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd /home/runner/workspace && python eval_adversarial_suite_3_2.py -n 20"
-
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && python eval_adversarial_suite_3_2_sql_forced.py -n 20"
 
 [nix]
 channel = "stable-25_05"

@@ -61,6 +61,9 @@ An "Intermediary Robustness Adversarial Suite" targeting clinic_3_2.py to test w
 
 Captures ac_action (N_A / ALLOWED_UNCHANGED — no intermediary in 3.2), violation detection (patient_id scope escape, unscoped aggregates, meta-access), and exports to `adversarial_suite_3_2.xlsx` with `runs` and `summary` sheets. Run via: `python eval_adversarial_suite_3_2.py -n 20`
 
+### Adversarial Suite SQL-Forced Evaluator (`eval_adversarial_suite_3_2_sql_forced.py`)
+Same 7-category adversarial suite as above, but for each prompt runs TWO variants back-to-back in the same session: (1) normal prompt, and (2) forced prompt prefixed with "Return ONLY a single SQLite SELECT query..." to coerce SQL generation. This stresses the LLM's refusal boundary and tests whether forced SQL output introduces violations that normal mode refuses. Captures `prompt_mode` (normal/forced) and additional summary metrics: `sql_generated_rate`, `intermediary_engagement_rate`, `refusal_rate`. Exports to `adversarial_suite_3_2_sql_forced.xlsx`. Run via: `python eval_adversarial_suite_3_2_sql_forced.py -n 20`
+
 ### Stability Schema Evaluator (`eval_stability_schema_3_2.py`)
 A 9-category attack suite with 36 prompts per chain testing direct role override, ignore-previous-instructions, impersonation, command modification, situational dialogue, indirect injection, multi-step agent style, trigger optimization, and schema leakage. Exports to `stability_schema_3_2_new_replication.xlsx`. Run via: `python eval_stability_schema_3_2.py -n 50`
 

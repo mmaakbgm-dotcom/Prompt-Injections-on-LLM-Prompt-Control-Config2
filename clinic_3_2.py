@@ -726,48 +726,57 @@ def get_user_display_name():
 
 
 # ==============================================================================
-# AUDIT LOGGING (private, for thesis documentation)
+# AUDIT LOGGING (persistent, append-only — thesis documentation)
 # ==============================================================================
-def write_audit_log(user_input,
-                    llm_raw_output,
-                    extracted_sql,
-                    decision,
-                    reason_code=None,
-                    row_count=None):
+_SEP = "-" * 80
+
+def append_audit_log(entry: dict):
     """
-    Write a private audit log entry for DB path requests.
-    Never shown to user. Logs metadata only, not data values.
+    Append a structured, human-readable audit entry to the audit log file.
+    Opens in append mode only — never overwrites existing content.
+
+    Required keys in entry:
+        timestamp, username, role, linked_id, user_input,
+        stage1_llm_raw_output, extracted_sql,
+        layer2_behavior, ac_action,
+        final_sql_executed, db_executed, row_count,
+        decision, final_visible_output, error
     """
-    session = get_session()
-    timestamp = datetime.now().isoformat()
-    username = session.get("username", "anonymous")
-    role = session.get("role", "none")
+    def _safe(v):
+        if v is None:
+            return "N/A"
+        return str(v).replace("\n", " ").replace("\r", " ").strip() or "N/A"
 
-    safe_raw = str(llm_raw_output).replace('\n', '\\n').replace(
-        '\r', '\\r') if llm_raw_output is not None else "None"
-    safe_sql = str(extracted_sql).replace('\n', '\\n').replace(
-        '\r', '\\r') if extracted_sql is not None else "None"
-
-    log_entry = {
-        "timestamp": timestamp,
-        "username": username,
-        "role": role,
-        "user_input": user_input,
-        "llm_raw_output": safe_raw,
-        "extracted_sql": safe_sql,
-        "decision": decision,
-    }
-
-    if decision == "DENIED":
-        log_entry["reason_code"] = reason_code
-    elif decision == "ALLOWED":
-        log_entry["row_count"] = row_count
-
-    log_line = " | ".join(f"{k}={v}" for k, v in log_entry.items())
+    lines = [
+        _SEP,
+        f"timestamp:               {_safe(entry.get('timestamp'))}",
+        f"layer:                   3_2",
+        f"username:                {_safe(entry.get('username'))}",
+        f"role:                    {_safe(entry.get('role'))}",
+        f"linked_id:               {_safe(entry.get('linked_id'))}",
+        "",
+        f"user_input:              {_safe(entry.get('user_input'))}",
+        "",
+        f"stage1_llm_raw_output:   {_safe(entry.get('stage1_llm_raw_output'))}",
+        f"extracted_sql:           {_safe(entry.get('extracted_sql'))}",
+        "",
+        f"layer2_behavior:         {_safe(entry.get('layer2_behavior'))}",
+        f"ac_action:               {_safe(entry.get('ac_action'))}",
+        "",
+        f"final_sql_executed:      {_safe(entry.get('final_sql_executed'))}",
+        f"db_executed:             {_safe(entry.get('db_executed'))}",
+        f"row_count:               {_safe(entry.get('row_count'))}",
+        "",
+        f"decision:                {_safe(entry.get('decision'))}",
+        f"final_visible_output:    {_safe(entry.get('final_visible_output'))}",
+        f"error:                   {_safe(entry.get('error'))}",
+        _SEP,
+        "",
+    ]
 
     try:
         with open(AUDIT_LOG_FILE, "a") as f:
-            f.write(log_line + "\n")
+            f.write("\n".join(lines) + "\n")
     except Exception:
         pass
 
@@ -950,49 +959,133 @@ def customer_chat(user_text: str):
       Stage 2: DB rows → LLM generates natural-language answer
     Access control is delegated entirely to the LLM via the guiding prompt.
     SafeChat messages are handled without LLM or database.
-    DB path requests are logged privately for thesis documentation.
+    All interactions are logged to the audit log for thesis documentation.
     """
+    session = get_session()
+    timestamp = datetime.now().isoformat()
+    username = session.get("username", "anonymous")
+    role = session.get("role", "none")
+    linked_id = session.get("linked_patient_id") or session.get("linked_doctor_id") or "N/A"
+
+    # --- SafeChat lane ---
     safechat_response, handled = handle_safechat(user_text)
     if handled:
         if is_authenticated() and MULTI_TURN:
             add_to_history(user_text, safechat_response)
+        append_audit_log({
+            "timestamp": timestamp,
+            "username": username,
+            "role": role,
+            "linked_id": linked_id,
+            "user_input": user_text,
+            "stage1_llm_raw_output": "N/A",
+            "extracted_sql": "N/A",
+            "layer2_behavior": "SafeChat lane — no LLM or DB invoked",
+            "ac_action": "N/A (Layer 2 — prompt-only, no intermediary)",
+            "final_sql_executed": "N/A",
+            "db_executed": False,
+            "row_count": 0,
+            "decision": "SAFECHAT",
+            "final_visible_output": safechat_response,
+            "error": "N/A",
+        })
         return safechat_response
 
+    # --- Authentication guard ---
     if not is_authenticated():
-        write_audit_log(user_text,
-                        None,
-                        None,
-                        "DENIED",
-                        reason_code="NOT_AUTHENTICATED")
+        append_audit_log({
+            "timestamp": timestamp,
+            "username": "anonymous",
+            "role": "none",
+            "linked_id": "N/A",
+            "user_input": user_text,
+            "stage1_llm_raw_output": "N/A",
+            "extracted_sql": "N/A",
+            "layer2_behavior": "Request blocked — user not authenticated",
+            "ac_action": "N/A (Layer 2 — prompt-only, no intermediary)",
+            "final_sql_executed": "N/A",
+            "db_executed": False,
+            "row_count": 0,
+            "decision": "DENIED",
+            "final_visible_output": "Request denied.",
+            "error": "NOT_AUTHENTICATED",
+        })
         return "Request denied."
 
+    # --- Stage 1: NL → SQL via LLM ---
     llm_raw_output, sql = ai_agent_to_sql(user_text)
 
     if sql is None:
-        write_audit_log(user_text,
-                        llm_raw_output,
-                        None,
-                        "DENIED",
-                        reason_code="PARSE_FAIL")
+        raw_upper = (llm_raw_output or "").strip().upper()
+        if raw_upper.startswith("NO_QUERY"):
+            l2_behavior = "Prompt layer returned NO_QUERY — request out of scope or denied by guiding prompt"
+        elif llm_raw_output is None:
+            l2_behavior = "LLM call failed — no output returned"
+        else:
+            l2_behavior = "SQL extraction failed — LLM output could not be parsed as SQL"
+
+        append_audit_log({
+            "timestamp": timestamp,
+            "username": username,
+            "role": role,
+            "linked_id": linked_id,
+            "user_input": user_text,
+            "stage1_llm_raw_output": llm_raw_output,
+            "extracted_sql": "N/A",
+            "layer2_behavior": l2_behavior,
+            "ac_action": "N/A (Layer 2 — prompt-only, no intermediary)",
+            "final_sql_executed": "N/A",
+            "db_executed": False,
+            "row_count": 0,
+            "decision": "DENIED",
+            "final_visible_output": "Request denied.",
+            "error": "NO_SQL_GENERATED",
+        })
         return "Request denied."
 
+    # --- Stage 2: Execute SQL and generate NL response ---
+    l2_behavior = "SQL generated by guiding prompt — executing against DB"
     result = run_sql(sql)
 
     if result["success"]:
         row_count = len(result["rows"]) if result["rows"] else 0
-        write_audit_log(user_text,
-                        llm_raw_output,
-                        sql,
-                        "ALLOWED",
-                        row_count=row_count)
         response = generate_nl_response(result["rows"], result["columns"])
+        append_audit_log({
+            "timestamp": timestamp,
+            "username": username,
+            "role": role,
+            "linked_id": linked_id,
+            "user_input": user_text,
+            "stage1_llm_raw_output": llm_raw_output,
+            "extracted_sql": sql,
+            "layer2_behavior": l2_behavior,
+            "ac_action": "N/A (Layer 2 — prompt-only, no intermediary)",
+            "final_sql_executed": sql,
+            "db_executed": True,
+            "row_count": row_count,
+            "decision": "ALLOWED",
+            "final_visible_output": response,
+            "error": "N/A",
+        })
     else:
-        write_audit_log(user_text,
-                        llm_raw_output,
-                        sql,
-                        "DENIED",
-                        reason_code="SQL_ERROR")
         response = "Request denied."
+        append_audit_log({
+            "timestamp": timestamp,
+            "username": username,
+            "role": role,
+            "linked_id": linked_id,
+            "user_input": user_text,
+            "stage1_llm_raw_output": llm_raw_output,
+            "extracted_sql": sql,
+            "layer2_behavior": l2_behavior,
+            "ac_action": "N/A (Layer 2 — prompt-only, no intermediary)",
+            "final_sql_executed": sql,
+            "db_executed": False,
+            "row_count": 0,
+            "decision": "DENIED",
+            "final_visible_output": response,
+            "error": "SQL_EXECUTION_ERROR",
+        })
 
     if MULTI_TURN:
         add_to_history(user_text, response)

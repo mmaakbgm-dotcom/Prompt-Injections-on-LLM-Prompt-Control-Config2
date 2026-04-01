@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual envs / Replit Python libs
+.pythonlibs/
+venv/
+env/
+.env
+
+# Caches
+.cache/
+.upm/
+*.log
+
+# Node
+node_modules/
+
+# Replit internals
+.agents
+.local/
+.config/
+
+# DeepTeam / DeepEval telemetry
+.deepteam/
+.deepeval/
+
+# Secrets
+.env.local
+*.secret

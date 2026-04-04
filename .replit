@@ -58,7 +58,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd /home/runner/workspace && python eval_inference_leakage_3_2.py -n 50"
+args = "cd /home/runner/workspace && python eval_inference_leakage_3_2.py"
 
 [[workflows.workflow]]
 name = "Adversarial Suite Run"

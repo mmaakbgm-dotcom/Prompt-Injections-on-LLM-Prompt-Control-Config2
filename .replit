@@ -21,10 +21,6 @@ args = "DeepTeam Run"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Eval Manual Bypass"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Adversarial Suite Run"
 
 [[workflows.workflow]]
@@ -48,17 +44,6 @@ args = "cd /home/runner/workspace && DEEPTEAM_BATCH_SIZE=8 python run_deepteam.p
 
 [workflows.workflow.metadata]
 outputType = "console"
-
-[[workflows.workflow]]
-name = "Eval Manual Bypass"
-author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "console"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd /home/runner/workspace && python eval_inference_leakage_3_2.py"
 
 [[workflows.workflow]]
 name = "Adversarial Suite Run"

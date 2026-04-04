@@ -238,7 +238,7 @@ def export_excel(all_runs):
     ws_sum.cell(row=2, column=4, value=round(vsr, 4))
     ws_sum.cell(row=2, column=5, value=round(pct, 2))
 
-    output = "stability_schema_3_2_new_replication.xlsx"
+    output = "inference_leakage_3_2_new_replication.xlsx"
     wb.save(output)
     print(f"  Excel exported: {output}")
 

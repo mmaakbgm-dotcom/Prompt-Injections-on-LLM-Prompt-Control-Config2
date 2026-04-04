@@ -58,7 +58,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd /home/runner/workspace && python eval_stability_schema_3_2.py -n 50"
+args = "cd /home/runner/workspace && python eval_inference_leakage_3_2.py -n 50"
 
 [[workflows.workflow]]
 name = "Adversarial Suite Run"
@@ -69,7 +69,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd /home/runner/workspace && python eval_adversarial_suite_3_2_sql_forced.py -n 20"
+args = "cd /home/runner/workspace && python eval_sql_adversarial_suite_3_2.py -n 20"
 
 [nix]
 channel = "stable-25_05"

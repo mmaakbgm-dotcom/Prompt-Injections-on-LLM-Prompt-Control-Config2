@@ -23,14 +23,10 @@ appointment portal.
 
 ## Architecture for Configuration 2
 
-This repository implements the first two layers of the broader four-configuration thesis architecture.
-
 ### Layer 1. Baseline Prompt Layer
 - Natural-language query processing
 - Text-to-SQL generation
 - System prompt guidance
-
-Relies primarily on LLM behaviour for query generation.
 
 ### Layer 2. LLM Prompt Control Layer
 - Role definitions
@@ -38,13 +34,10 @@ Relies primarily on LLM behaviour for query generation.
 - Prompt constraints
 - Refusal behaviour
 
-This layer attempts to mitigate direct prompt injection and role override attempts by
-constraining model behaviour through a hardened guiding prompt.
+This layer constrains model behaviour via a hardened guiding prompt.
 
 ### Configuration 2 Summary
-Configuration 2 extends the baseline by introducing prompt-level access control.
-However, the system still depends on model compliance and does not yet include
-deterministic intermediary enforcement or database-level authorization controls.
+Security depends on LLM compliance. No deterministic enforcement exists.
 
 ---
 
@@ -52,7 +45,7 @@ deterministic intermediary enforcement or database-level authorization controls.
 
 | Suite | Runs | Violations | Attack Success Rate |
 |-------|------|------------|---------------------|
-| Promptfoo (15 attack categories) | 120 | 0 | **0.00%** |
+| Promptfoo Evaluation | 120 | 0 | **0.00%** |
 | DeepTeam (20 vulnerability types) | ~100 | 0 confirmed | **0.00%** |
 | SQL Adversarial Suite (7 categories, 20 chains) | 920 | 49 | **5.33% VSR** |
 
@@ -66,36 +59,28 @@ Result files: `sql_adversarial_suite_3_2.xlsx`, `deepteam_results_3_2.xlsx`,
 
 ---
 
-## System Architecture
+## Request Processing Pipeline
 
-```
-User Input (natural language)
-        │
-        ▼
- authenticate()            ← username/password gate (only code-enforced check)
-        │
-        ▼
- safe_chat_response()      ← short-circuit for greetings (no LLM call)
-        │
-        ▼
- ai_agent_to_sql()         ← Stage 1: NL → SQL via GPT-4o-mini (temp=1.5)
-   System prompt: GUIDING_PROMPT (role-scoped per session)
-   Conversation history: last 6 turns (MULTI_TURN=True)
-        │
-        ├── NO_QUERY → "Request denied."
-        │
-        ▼
- run_sql()                 ← SQL executed verbatim against SQLite (no rewriting)
-        │
-        ▼
- generate_nl_response()    ← Stage 2: rows → natural language (GPT-4o-mini, temp=0.3)
-        │
-        ▼
- append_audit_log()        ← every interaction logged (append-only, not tracked by git)
-        │
-        ▼
- Final response returned to user
-```
+### 1. Authentication
+Username/password gate — the only code-enforced check in this configuration.
+
+### 2. SafeChat Check
+Short-circuits greetings and help requests without invoking the LLM or database.
+
+### 3. NL → SQL Generation (Stage 1)
+User input is processed by GPT-4o-mini using the hardened guiding prompt
+(`GUIDING_PROMPT`, role-scoped per session) to produce a SQL query or `NO_QUERY`.
+Conversation history is retained for up to 6 turns.
+
+### 4. Direct Query Execution
+SQL is executed verbatim against SQLite without validation, rewriting, or
+WHERE-clause enforcement.
+
+Security depends on prompt adherence.
+
+### 5. Response Generation
+LLM summarizes database results as natural language (GPT-4o-mini, temp=0.3).
+Every interaction is appended to the audit log (not tracked by git).
 
 ---
 

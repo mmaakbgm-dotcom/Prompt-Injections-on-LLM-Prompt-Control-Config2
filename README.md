@@ -14,15 +14,12 @@ appointment portal.
 
 ## The Four Configurations
 
-Each configuration activates a different subset of the four-layer defense architecture.
-Only the layers marked ✓ are active in each configuration.
-
-| Config | Layer 1 | Layer 2 | Layer 3 | Layer 4 | Primary Mechanism |
-|--------|:-------:|:-------:|:-------:|:-------:|-------------------|
-| Config 1 | ✓ | | | | Input sanitization only |
-| **Config 2** | | **✓** | | | **Guiding-prompt access control only (this repo)** |
-| Config 3 | | ✓ | | | Prompt structuring only |
-| Config 4 | | | | ✓ | Code-enforced SQL rewriting only |
+| Config | Name | Primary Enforcement | Repo |
+|---|---|---|---|
+| 1 | No Defense | None — LLM fully trusted | Separate repository |
+| 2 | Prompt-Only | Hardened LLM system guiding prompt | This repository |
+| 3 | Intermediary-Level AC | Deterministic intermediary enforcement layer | Separate repository |
+| 4 | Database AC | RBAC, RLS, and defining views | Separate repository |
 
 ### The Four-Layer Defense Architecture
 

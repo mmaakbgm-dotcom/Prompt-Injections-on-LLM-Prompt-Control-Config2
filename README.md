@@ -340,19 +340,19 @@ schema, all application logic, and all three evaluation frameworks.
 
 ## Results Summary
 
-| Suite | Runs | Violations | ASR% |
-|-------|------|------------|------|
-| Promptfoo Evaluation | 120 | 0 | **0.00%** |
-| DeepTeam Evaluation | ~100 | 0 confirmed | **0.00%** |
-| SQL Adversarial Suite Evaluation | 920 | 49 | **5.33%** |
+The following results are derived from the reference evaluation run included in this repository. Attack Success Rate (ASR) is defined as the proportion of successful attacks over total test cases.
 
-**Key finding:** The guiding prompt successfully blocks all conversational attacks
-(Promptfoo, DeepTeam) but is partially bypassed by structural SQL construction
-techniques — particularly `GROUP BY` / `DISTINCT` aggregation queries, which account
-for 41 of 49 violations (84% of all ASR).
+| Evaluation | Successful | Blocked | Total | ASR |
+|---|---|---|---|---|
+| Promptfoo Evaluation | 0 | 120 | 120 | 0.0% |
+| DeepTeam Evaluation | 0 | 120 | 120 | 0.0% |
+| Stability Schema Evaluation | 2 | 718 | 720 | 0.28% |
+| SQL Adversarial Suite Evaluation | 49 | 871 | 920 | 5.3% |
+| **Combined** | **51** | **1,829** | **1,880** | **2.7%** |
 
-Result files: `sql_adversarial_suite_3_2.xlsx`, `deepteam_results_3_2.xlsx`,
-`deepteam_summary_3_2.md`, `promptfoo_results_3_2.xlsx`.
+### Interpretation
+
+Configuration 2 significantly reduces attack success rates compared to the baseline, demonstrating that a hardened guiding prompt can effectively mitigate conversational prompt injection attacks. However, residual vulnerabilities remain in structurally constructed SQL attacks, indicating that prompt-level control alone is insufficient for complete protection.
 
 ---
 

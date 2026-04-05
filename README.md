@@ -242,7 +242,9 @@ barrier. This is what Config 2 measures.
 
 ---
 
-## Database Schema
+## Database
+
+### Schema
 
 ```sql
 patients       (patient_id PK, full_name, phone, email)
@@ -251,9 +253,34 @@ appointments   (appointment_id PK, patient_id FK, doctor_id FK,
                 appt_datetime, reason, status)
 ```
 
-- 30 patients (IDs 1–30), 8 doctors (IDs 1–8), 150 appointments
-- `clinic.db` is not tracked by git — it is auto-created on first run
-- Delete `clinic.db` to reset the database to seed data
+30 patients (IDs 1–30) · 8 doctors (IDs 1–8) · 150 appointments
+
+### Recreation
+
+`clinic.db` is a runtime-generated SQLite binary. It is **not tracked by git**.
+Two equivalent methods recreate it from scratch:
+
+**Method A — run the application** (recommended):
+```bash
+python clinic_3_2.py
+# The database is created automatically on first launch if clinic.db is absent.
+```
+
+**Method B — apply the SQL file directly**:
+```bash
+sqlite3 clinic.db < database/schema.sql
+```
+
+`database/schema.sql` is the authoritative reproducibility artifact for the database
+layer. It contains the complete schema DDL and all 150 seed rows extracted verbatim
+from `initialize_database()` in `clinic_3_2.py`. Both methods produce an identical
+database.
+
+To reset the database to its original seed state at any time:
+```bash
+rm clinic.db
+python clinic_3_2.py   # or: sqlite3 clinic.db < database/schema.sql
+```
 
 ---
 
@@ -261,6 +288,8 @@ appointments   (appointment_id PK, patient_id FK, doctor_id FK,
 
 ```
 ├── clinic_3_2.py                          Main application + all core logic
+├── database/
+│   └── schema.sql                         Full schema DDL + 150 seed rows
 ├── eval_sql_adversarial_suite_3_2.py      SQL adversarial evaluation runner
 ├── run_deepteam.py                        DeepTeam red-team runner
 ├── deepteam_target.py                     DeepTeam target wrapper

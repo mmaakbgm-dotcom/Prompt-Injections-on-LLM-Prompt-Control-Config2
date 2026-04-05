@@ -14,10 +14,11 @@ venv/
 env/
 .env
 
-# Caches
+# Caches and lock files
 .cache/
 .upm/
 *.log
+uv.lock
 
 # Node
 node_modules/
@@ -26,6 +27,7 @@ node_modules/
 .agents
 .local/
 .config/
+replit.md
 
 # DeepTeam / DeepEval telemetry
 .deepteam/
@@ -34,3 +36,11 @@ node_modules/
 # Secrets
 .env.local
 *.secret
+
+# Runtime-generated files (auto-created on first run)
+clinic.db
+3_2_audit_log.txt
+guiding_prompt.txt
+
+# Temporary uploads / scratch files
+attached_assets/

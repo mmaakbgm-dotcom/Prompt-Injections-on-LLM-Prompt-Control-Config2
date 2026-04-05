@@ -28,6 +28,7 @@ node_modules/
 .local/
 .config/
 replit.md
+.replit
 
 # DeepTeam / DeepEval telemetry
 .deepteam/
@@ -37,10 +38,14 @@ replit.md
 .env.local
 *.secret
 
-# Runtime-generated files (auto-created on first run)
+# Runtime-generated files (auto-created on first run — do not track)
 clinic.db
 3_2_audit_log.txt
 guiding_prompt.txt
+
+# Raw evaluation JSON outputs (large, intermediate; keep .xlsx summaries instead)
+results_3_2.json
+deepteam_results_3_2.json
 
 # Temporary uploads / scratch files
 attached_assets/

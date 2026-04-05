@@ -21,28 +21,6 @@ appointment portal.
 | 3 | Intermediary-Level AC | Deterministic intermediary enforcement layer | Separate repository |
 | 4 | Database AC | RBAC, RLS, and defining views | Separate repository |
 
-## Related Configurations
-
-This repository is part of a four-configuration study evaluating prompt injection defenses across progressively stronger enforcement layers.
-
-- **Configuration 1 — No Defense**
-  LLM fully trusted, no enforcement
-  https://github.com/mmaakbgm-dotcom/Prompt-Injections-on-Baseline-Prompt-Config1
-
-- **Configuration 2 — Prompt-Only (This repository)**
-  Hardened LLM system guiding prompt
-  https://github.com/mmaakbgm-dotcom/Prompt-Injections-on-LLM-Prompt-Control-Config2
-
-- **Configuration 3 — Intermediary-Level AC**
-  Deterministic SQL validation and enforcement layer
-  https://github.com/mmaakbgm-dotcom/Prompt-Injections-on-Intermediary-Enforcement-Config3
-
-- **Configuration 4 — Database AC**
-  RBAC, RLS, and defined views as final enforcement
-  https://github.com/mmaakbgm-dotcom/Prompt-Injections-on-Database-Authorization-Config4
-
----
-
 ## Architecture for Configuration 2
 
 ### Layer 1. Baseline Prompt Layer
@@ -373,3 +351,25 @@ The reconstruction prompt in `prompts/config2_reconstruction_prompt.md` is a com
 specification that can be fed to an AI coding assistant to rebuild this entire
 project from scratch, including the database schema, all application logic, and
 all three evaluation frameworks.
+
+---
+
+## Related Configurations
+
+This repository is part of a four-configuration study evaluating prompt injection defenses across progressively stronger enforcement layers.
+
+- **Configuration 1 — No Defense**  
+  LLM fully trusted, no enforcement  
+  https://github.com/mmaakbgm-dotcom/Prompt-Injections-on-Baseline-Prompt-Config1
+
+- **Configuration 2 — Prompt-Only (This repository)**  
+  Hardened LLM system guiding prompt  
+  https://github.com/mmaakbgm-dotcom/Prompt-Injections-on-LLM-Prompt-Control-Config2
+
+- **Configuration 3 — Intermediary-Level AC**  
+  Deterministic SQL validation and enforcement layer  
+  https://github.com/mmaakbgm-dotcom/Prompt-Injections-on-Intermediary-Enforcement-Config3
+
+- **Configuration 4 — Database AC**  
+  RBAC, RLS, and defined views as final enforcement  
+  https://github.com/mmaakbgm-dotcom/Prompt-Injections-on-Database-Authorization-Config4

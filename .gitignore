@@ -28,7 +28,6 @@ node_modules/
 .local/
 .config/
 replit.md
-.replit
 
 # DeepTeam / DeepEval telemetry
 .deepteam/

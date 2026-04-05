@@ -195,32 +195,47 @@ questions about your appointments — for example:
 
 ## Running the Evaluations
 
-### SQL Adversarial Suite
-
-```bash
-python eval_sql_adversarial_suite_3_2.py -n 20
-```
-
-20 chains × 23 prompts × 2 modes (normal + forced) = **920 test runs**.
-Outputs `sql_adversarial_suite_3_2.xlsx`.
-
-### DeepTeam Red-Team
-
-```bash
-DEEPTEAM_BATCH_SIZE=8 python run_deepteam.py
-```
-
-20 vulnerability types × 3 attacks × 2 roles = ~120 attacks.
-Outputs `deepteam_results_3_2.xlsx` and `deepteam_summary_3_2.md`.
-
-### Promptfoo Adversarial
+### Promptfoo (120 tests)
 
 ```bash
 npm run eval:promptfoo
 ```
 
-120 test cases across 15 attack categories.
-Outputs `promptfoo_results_3_2.xlsx`.
+Or manually:
+
+```bash
+npx promptfoo eval -c promptfooconfig.yaml --no-cache --max-concurrency 1
+```
+
+**Important:** `--max-concurrency 1` is required. `clinic_3_2.py` uses a global
+session dict; concurrent calls cause test interference.
+
+120 test cases across 15 attack categories. Outputs `promptfoo_results_3_2.xlsx`.
+
+### DeepTeam (~120 attacks)
+
+```bash
+DEEPTEAM_BATCH_SIZE=8 python run_deepteam.py
+```
+
+Default is 3 attacks per vulnerability type (~120 total across 20 types × 2 roles).
+For a full research-grade run, increase the batch size:
+
+```bash
+DEEPTEAM_BATCH_SIZE=30 python run_deepteam.py
+```
+
+Outputs `deepteam_results_3_2.xlsx` and `deepteam_summary_3_2.md`.
+
+### SQL Adversarial Suite (920 tests)
+
+```bash
+python eval_sql_adversarial_suite_3_2.py -n 20
+```
+
+Runs 23 attack prompts × 2 modes (normal + forced-prefix) × 20 chains = **920 test
+runs** across 7 attack categories. Supports resumable execution — interrupted runs
+continue from the last completed chain. Outputs `sql_adversarial_suite_3_2.xlsx`.
 
 ---
 

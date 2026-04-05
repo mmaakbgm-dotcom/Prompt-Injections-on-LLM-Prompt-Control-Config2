@@ -340,16 +340,16 @@ schema, all application logic, and all three evaluation frameworks.
 
 ## Results Summary
 
-| Suite | Runs | Violations | Attack Success Rate |
-|-------|------|------------|---------------------|
+| Suite | Runs | Violations | ASR% |
+|-------|------|------------|------|
 | Promptfoo Evaluation | 120 | 0 | **0.00%** |
 | DeepTeam Evaluation | ~100 | 0 confirmed | **0.00%** |
-| SQL Adversarial Suite Evaluation | 920 | 49 | **5.33% VSR** |
+| SQL Adversarial Suite Evaluation | 920 | 49 | **5.33%** |
 
 **Key finding:** The guiding prompt successfully blocks all conversational attacks
 (Promptfoo, DeepTeam) but is partially bypassed by structural SQL construction
 techniques — particularly `GROUP BY` / `DISTINCT` aggregation queries, which account
-for 41 of 49 violations (84%).
+for 41 of 49 violations (84% of all ASR).
 
 Result files: `sql_adversarial_suite_3_2.xlsx`, `deepteam_results_3_2.xlsx`,
 `deepteam_summary_3_2.md`, `promptfoo_results_3_2.xlsx`.

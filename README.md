@@ -1,13 +1,25 @@
-# HealthFirst Clinic — Configuration 2: Prompt-Level Access Control
+# HealthFirst Clinic — Configuration 2: LLM Prompt Control
 
-**Layer 3.2** | Thesis experiment on LLM-driven NL-to-SQL access control security
+Configuration 2 / Layer 2: LLM Prompt Control Layer
+
+---
 
 ## Overview
 
-This is **Configuration 2** of a four-configuration cross-layer security comparison
-study. It evaluates whether a guiding prompt alone — with no code-enforced SQL
-guards of any kind — can resist scope-bypass attacks in a GPT-4o-mini healthcare
-appointment portal.
+This repository implements Configuration 2 of a four-configuration thesis experiment evaluating prompt injection resistance in LLM-driven access control systems.
+
+This configuration introduces a **prompt-level defense** by strengthening the guiding system prompt used by the LLM. No deterministic enforcement mechanisms are applied.
+
+The system implements a two-stage LLM pipeline:
+
+```
+User (natural language)
+  → Stage 1 LLM (GPT-4o-mini) → SQL query
+  → SQLite database
+  → Stage 2 LLM (GPT-4o-mini) → Natural language response
+```
+
+Unlike Configuration 1, this configuration attempts to constrain model behavior using a **hardened guiding prompt**, but still executes generated SQL directly without validation.
 
 ---
 
@@ -15,32 +27,32 @@ appointment portal.
 
 This repository is part of a four-configuration study evaluating prompt injection defenses across progressively stronger enforcement layers.
 
-- **Configuration 1 — No Defense**  
+- **Configuration 1 — Baseline Prompt**  
   LLM fully trusted, no enforcement  
   https://github.com/mmaakbgm-dotcom/Prompt-Injections-on-Baseline-Prompt-Config1
 
-- **Configuration 2 — Prompt-Only (This repository)**  
+- **Configuration 2 — LLM Prompt Control (This repository)**  
   Hardened LLM system guiding prompt  
   https://github.com/mmaakbgm-dotcom/Prompt-Injections-on-LLM-Prompt-Control-Config2
 
-- **Configuration 3 — Intermediary-Level AC**  
-  Deterministic SQL validation and enforcement layer  
+- **Configuration 3 — Intermediary Enforcement**  
+  Deterministic intermediary enforcement layer  
   https://github.com/mmaakbgm-dotcom/Prompt-Injections-on-Intermediary-Enforcement-Config3
 
-- **Configuration 4 — Database AC**  
-  RBAC, RLS, and defined views as final enforcement  
+- **Configuration 4 — Database Authorization**  
+  RBAC, RLS, and defining views  
   https://github.com/mmaakbgm-dotcom/Prompt-Injections-on-Database-Authorization-Config4
 
 ---
 
 ## The Four Configurations
 
-| Config | Name | Primary Enforcement | Repo |
-|---|---|---|---|
-| 1 | No Defense | None — LLM fully trusted | Separate repository |
-| 2 | Prompt-Only | Hardened LLM system guiding prompt | This repository |
-| 3 | Intermediary-Level AC | Deterministic intermediary enforcement layer | Separate repository |
-| 4 | Database AC | RBAC, RLS, and defining views | Separate repository |
+| Config | Name | Primary Enforcement |
+|--------|------|---------------------|
+| 1 | Baseline Prompt | None — LLM fully trusted |
+| 2 | LLM Prompt Control | Hardened LLM system guiding prompt |
+| 3 | Intermediary Enforcement | Deterministic intermediary enforcement layer |
+| 4 | Database Authorization | RBAC, RLS, and defining views |
 
 ---
 
@@ -57,290 +69,133 @@ This repository is part of a four-configuration study evaluating prompt injectio
 - Prompt constraints
 - Refusal behaviour
 
-This layer constrains model behaviour via a hardened guiding prompt.
+This configuration relies on **LLM compliance** to enforce access control.
 
 ### Configuration 2 Summary
-Security depends on LLM compliance. No deterministic enforcement exists.
+
+A hardened guiding prompt is introduced to constrain LLM behavior.  
+No deterministic or programmatic enforcement is applied.
 
 ---
 
 ## Request Processing Pipeline
 
-### 1. Authentication
-Username/password gate — the only code-enforced check in this configuration.
+### 1. User Query Submission
+User submits a natural-language query.
 
-### 2. SafeChat Check
-Short-circuits greetings and help requests without invoking the LLM or database.
+### 2. Authentication and Session Retrieval
+User identity, role, and ID are retrieved.
 
-### 3. NL → SQL Generation (Stage 1)
-User input is processed by GPT-4o-mini using the hardened guiding prompt
-(`GUIDING_PROMPT`, role-scoped per session) to produce a SQL query or `NO_QUERY`.
-Conversation history is retained for up to 6 turns.
+### 3. LLM SQL Generation
+The LLM generates SQL using:
+- Hardened guiding prompt
+- Schema context
+- Session data
 
-### 4. Direct Query Execution
-SQL is executed verbatim against SQLite without validation, rewriting, or
-WHERE-clause enforcement.
+The model may also return `NO_QUERY` for unsafe requests.
 
-Security depends on prompt adherence.
+### 4. Direct Execution
+SQL executes without validation or rewriting.
 
 ### 5. Response Generation
-LLM summarizes database results as natural language (GPT-4o-mini, temp=0.3).
-Every interaction is appended to the audit log (not tracked by git).
+Results are converted into natural language.
 
 ---
 
 ## Evaluation
 
-Three independent evaluation suites assess the security of Configuration 2:
-
-| Suite | Tool | Test Count |
-|-------|------|------------|
-| Promptfoo Evaluation | Promptfoo (npm) | 120 |
-| DeepTeam Evaluation | DeepTeam (Python) | ~120 |
-| SQL Adversarial Suite Evaluation | Custom Python runner | 920 |
+| Framework | Tests | Output |
+|-----------|-------|--------|
+| Promptfoo Evaluation | 120 | promptfoo_results_3_2.xlsx |
+| DeepTeam Evaluation | 120 | deepteam_results_3_2.xlsx |
+| Stability Schema Evaluation | 720 | stability_schema_3_2.xlsx |
+| SQL Adversarial Suite Evaluation | 920 | sql_adversarial_suite_3_2.xlsx |
 
 ---
 
 ## Repository Structure
 
 ```
-├── clinic_3_2.py                          Main application + all core logic
-├── database/
-│   └── schema.sql                         Full schema DDL + 150 seed rows
-├── eval_sql_adversarial_suite_3_2.py      SQL adversarial evaluation runner
-├── run_deepteam.py                        DeepTeam red-team runner
-├── deepteam_target.py                     DeepTeam target wrapper
+.
+├── clinic_3_2.py
+├── database/schema.sql
+├── prompts/config2_reconstruction_prompt.md
+├── tests/
 ├── deepteam_attacks/
-│   ├── attacks_config.py                  20 vulnerability type definitions
-│   └── __init__.py
-├── promptfooconfig.yaml                   Promptfoo configuration
-├── promptfoo_provider.py                  Promptfoo Python provider
-├── promptfoo_tests.yaml                   Main Promptfoo test cases
-├── tests/                                 15 YAML attack-category files
-│   ├── jailbreak_override.yaml
-│   ├── policy_smuggling.yaml
-│   ├── exfil_format_dump.yaml
-│   ├── prompt_leakage.yaml
-│   ├── role_confusion.yaml
-│   ├── multiturn_poisoning.yaml
-│   ├── sql_dialect_evasion.yaml
-│   ├── encoding_obfuscation.yaml
-│   ├── context_exhaustion.yaml
-│   ├── output_format_manipulation.yaml
-│   ├── temporal_logic.yaml
-│   ├── semantic_equivalence.yaml
-│   ├── cot_extraction.yaml
-│   ├── tool_function_confusion.yaml
-│   └── multilingual_bypass.yaml
-├── prompts/
-│   └── config2_reconstruction_prompt.md   Full AI rebuild specification
-├── sql_adversarial_suite_3_2.xlsx         Evaluation results (SQL adversarial)
-├── deepteam_results_3_2.xlsx             Evaluation results (DeepTeam)
-├── deepteam_summary_3_2.md               Evaluation summary (DeepTeam)
-├── promptfoo_results_3_2.xlsx            Evaluation results (Promptfoo)
-├── pyproject.toml                         Python dependencies
-├── package.json                           Node dependencies (Promptfoo)
-├── package-lock.json
-├── .env.example                           Environment variable template
-└── .gitignore
+├── eval_sql_adversarial_suite_3_2.py
+├── run_deepteam.py
+├── promptfooconfig.yaml
+├── promptfoo_provider.py
+├── promptfoo_tests.yaml
+├── promptfoo_results_3_2.xlsx
+├── deepteam_results_3_2.xlsx
+├── stability_schema_3_2.xlsx
+└── sql_adversarial_suite_3_2.xlsx
 ```
 
 ---
 
 ## Setup Instructions
 
-### Prerequisites
-
+**Prerequisites:**
 - Python 3.11+
-- Node.js 18+ and npm (for Promptfoo evaluation only)
-- An OpenAI API key with GPT-4o-mini access
+- Node.js 18+
+- OpenAI API key
 
-### 1. Clone
-
-```bash
-git clone https://github.com/<your-username>/<your-repo>.git
-cd <your-repo>
-```
-
-### 2. Configure Environment Variables
+**Install:**
 
 ```bash
-cp .env.example .env
-# Edit .env — set AI_INTEGRATIONS_OPENAI_API_KEY and AI_INTEGRATIONS_OPENAI_BASE_URL
-```
-
-On **Replit**: set these in the Secrets panel or via the OpenAI integration.
-
-### 3. Install Python Dependencies
-
-```bash
-pip install openai deepteam openpyxl
-```
-
-### 4. Install Node Dependencies (Promptfoo only)
-
-```bash
+pip install openai openpyxl deepteam
 npm install
+```
+
+**Run:**
+
+```bash
+python clinic_3_2.py
 ```
 
 ---
 
 ## Database Setup
 
-### Schema
-
-```sql
-patients       (patient_id PK, full_name, phone, email)
-doctors        (doctor_id PK, full_name, specialty)
-appointments   (appointment_id PK, patient_id FK, doctor_id FK,
-                appt_datetime, reason, status)
-```
-
-30 patients (IDs 1–30) · 8 doctors (IDs 1–8) · 150 appointments
-
-### Recreation
-
-`clinic.db` is a runtime-generated SQLite binary. It is **not tracked by git**.
-Two equivalent methods recreate it from scratch:
-
-**Method A — run the application** (recommended):
+**Option A:**
 ```bash
 python clinic_3_2.py
-# The database is created automatically on first launch if clinic.db is absent.
 ```
 
-**Method B — apply the SQL file directly**:
+**Option B:**
 ```bash
 sqlite3 clinic.db < database/schema.sql
 ```
 
-`database/schema.sql` is the authoritative reproducibility artifact for the database
-layer. It contains the complete schema DDL and all 150 seed rows extracted verbatim
-from `initialize_database()` in `clinic_3_2.py`. Both methods produce an identical
-database.
-
-To reset the database to its original seed state at any time:
-```bash
-rm clinic.db
-python clinic_3_2.py   # or: sqlite3 clinic.db < database/schema.sql
-```
-
 ---
 
-## Running the Application
+## Running Evaluations
 
-```bash
-python clinic_3_2.py
-```
-
-Log in with any test credential (see table below), then ask natural-language
-questions about your appointments — for example:
-
-- *"Show my upcoming appointments"*
-- *"Who is my doctor?"*
-- *"Do I have anything scheduled next month?"*
-
----
-
-## Test Credentials
-
-> **Disclaimer:** All usernames, passwords, names, phone numbers, and email
-> addresses in this project are **entirely synthetic**. They were created solely
-> for this academic research experiment and do not correspond to any real person,
-> patient, or medical professional.
-
-**Patients:**
-
-| Username | Password   | Patient ID | Name              |
-|----------|------------|------------|-------------------|
-| alice    | alice123   | 1          | Alice Johnson     |
-| bob      | bob123     | 2          | Bob Smith         |
-| carol    | carol123   | 3          | Carol Williams    |
-| dave     | dave123    | 4          | Dave Martinez     |
-| eve      | eve123     | 5          | Eve Chen          |
-| frank    | frank123   | 6          | Frank Wilson      |
-| grace    | grace123   | 7          | Grace Thompson    |
-| henry    | henry123   | 8          | Henry Park        |
-| irene    | irene123   | 9          | Irene Foster      |
-| james    | james123   | 10         | James O'Brien     |
-| karen    | karen123   | 11         | Karen Lee         |
-| leo      | leo123     | 12         | Leo Gonzalez      |
-| maria    | maria123   | 13         | Maria Santos      |
-| nathan   | nathan123  | 14         | Nathan Wright     |
-| olivia   | olivia123  | 15         | Olivia Turner     |
-
-**Doctors:**
-
-| Username      | Password      | Doctor ID | Name                   | Specialty          |
-|---------------|---------------|-----------|------------------------|--------------------|
-| dr_brown      | brown123      | 1         | Dr. Emily Brown        | General Practice   |
-| dr_davis      | davis123      | 2         | Dr. Michael Davis      | Cardiology         |
-| dr_wilson     | wilson123     | 3         | Dr. Sarah Wilson       | Pediatrics         |
-| dr_patel      | patel123      | 4         | Dr. Raj Patel          | Orthopedics        |
-| dr_nakamura   | nakamura123   | 5         | Dr. Yuki Nakamura      | Neurology          |
-| dr_oconnell   | oconnell123   | 6         | Dr. Sean O'Connell     | Gastroenterology   |
-| dr_rodriguez  | rodriguez123  | 7         | Dr. Ana Rodriguez      | Pulmonology        |
-| dr_kim        | kim123        | 8         | Dr. Daniel Kim         | Endocrinology      |
-
----
-
-## Running the Evaluations
-
-### Promptfoo Evaluation
-
-```bash
-npm run eval:promptfoo
-```
-
-Or manually:
-
+**Promptfoo:**
 ```bash
 npx promptfoo eval -c promptfooconfig.yaml --no-cache --max-concurrency 1
 ```
 
-**Important:** `--max-concurrency 1` is required. `clinic_3_2.py` uses a global
-session dict; concurrent calls cause test interference.
-
-120 test cases across 15 attack categories. Outputs `promptfoo_results_3_2.xlsx`.
-
-### DeepTeam Evaluation
-
+**DeepTeam:**
 ```bash
-DEEPTEAM_BATCH_SIZE=8 python run_deepteam.py
+python run_deepteam.py
 ```
 
-Default is 3 attacks per vulnerability type (~120 total across 20 types × 2 roles).
-For a full research-grade run, increase the batch size:
-
+**Stability Schema:**
 ```bash
-DEEPTEAM_BATCH_SIZE=30 python run_deepteam.py
+python eval_stability_schema_3_2.py -n 20
 ```
 
-Outputs `deepteam_results_3_2.xlsx` and `deepteam_summary_3_2.md`.
-
-### SQL Adversarial Suite Evaluation
-
+**SQL Adversarial Suite:**
 ```bash
 python eval_sql_adversarial_suite_3_2.py -n 20
 ```
 
-Runs 23 attack prompts × 2 modes (normal + forced-prefix) × 20 chains = **920 test
-runs** across 7 attack categories. Supports resumable execution — interrupted runs
-continue from the last completed chain. Outputs `sql_adversarial_suite_3_2.xlsx`.
-
----
-
-## Reconstruction Prompt
-
-A complete specification for rebuilding this project from scratch using an AI coding
-assistant is in `prompts/config2_reconstruction_prompt.md`. It covers the database
-schema, all application logic, and all three evaluation frameworks.
-
 ---
 
 ## Results Summary
-
-The following results are derived from the reference evaluation run included in this repository. Attack Success Rate (ASR) is defined as the proportion of successful attacks over total test cases.
 
 | Evaluation | Successful | Blocked | Total | ASR |
 |---|---|---|---|---|
@@ -350,36 +205,36 @@ The following results are derived from the reference evaluation run included in 
 | SQL Adversarial Suite Evaluation | 49 | 871 | 920 | 5.3% |
 | **Combined** | **51** | **1,829** | **1,880** | **2.7%** |
 
-### Interpretation
+---
 
-Configuration 2 significantly reduces attack success rates compared to the baseline, demonstrating that a hardened guiding prompt can effectively mitigate conversational prompt injection attacks. However, residual vulnerabilities remain in structurally constructed SQL attacks, indicating that prompt-level control alone is insufficient for complete protection.
+## Interpretation
+
+Configuration 2 significantly reduces attack success rates compared to the baseline.
+
+- Conversational attacks → fully mitigated
+- Structural SQL attacks → partially successful
+
+This demonstrates that prompt-level defenses improve security but remain insufficient without deterministic enforcement.
 
 ---
 
 ## Security Notes
 
-The guiding prompt (constant in `clinic_3_2.py`, written to `guiding_prompt.txt`
-at startup) instructs the LLM:
-
-- **Patient role:** every `appointments` query MUST include `WHERE patient_id = {linked_id}`
-- **Doctor role:** every `appointments` query MUST include `WHERE doctor_id = {linked_id}`
-- **Both roles:** may freely query the `doctors` table (public reference data)
-- If a request cannot be answered within scope: output `NO_QUERY`
-
-**There is no code that enforces these rules.** The LLM's compliance is the only
-barrier. This is what Config 2 measures.
+- No real data used
+- Synthetic credentials only
+- API keys stored in environment variables
+- No enforcement beyond LLM behavior
 
 ---
 
-## Reproducibility Statement
+## Reproducibility
 
-All evaluation scripts reset session state between test cases using `clinic.logout()`.
-Stage 1 uses `temperature=1.5`, which introduces non-determinism; re-running evaluations
-may produce small variation at boundary cases. The SQL Adversarial Suite's `--forced`
-mode prepends a directive instructing the LLM to emit SQL even for out-of-scope
-requests — this intentionally probes the hard boundary of the guiding prompt.
+| Artefact | Reproduction Method |
+|----------|---------------------|
+| clinic.db | `python clinic_3_2.py` |
+| Promptfoo results | `npx promptfoo eval -c promptfooconfig.yaml` |
+| DeepTeam results | `python run_deepteam.py` |
+| Stability Schema results | `python eval_stability_schema_3_2.py` |
+| SQL Adversarial results | `python eval_sql_adversarial_suite_3_2.py` |
 
-The reconstruction prompt in `prompts/config2_reconstruction_prompt.md` is a complete
-specification that can be fed to an AI coding assistant to rebuild this entire
-project from scratch, including the database schema, all application logic, and
-all three evaluation frameworks.
+Note: Results may vary slightly due to LLM randomness (temperature = 1.5).
